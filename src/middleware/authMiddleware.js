@@ -1,8 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
+import dbConnect from "@/src/utils/dbConnect";
+import User from "@/src/models/User";
 
 export function authMiddleware(handler) {
   return async (request) => {
+    await dbConnect();
+
     const authHeader = request.headers.get("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -16,11 +20,28 @@ export function authMiddleware(handler) {
 
     try {
       const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-      // Přidá dekódovaný token do požadavku
+
+      // Najděte uživatele podle ID z dekódovaného tokenu
+      const user = await User.findById(decodedToken.id);
+
+      // Zkontrolujte, zda uživatel existuje a zda token odpovídá
+      if (!user || user.token !== token) {
+        return NextResponse.json(
+          { success: false, message: "Invalid or expired token" },
+          { status: 403 }
+        );
+      }
+
+      // Přidejte data uživatele k požadavku pro další použití
       request.user = decodedToken;
-      // Pokračuje v zpracování požadavku s handlerem
+      //console.log("Decoded Token:", decodedToken);
+
+      request.userData = user;
+      //console.log("Request User:", request.user);
+
+      // Pokračujte ve zpracování požadavku
       return handler(request);
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, message: "Invalid or expired token" },
         { status: 403 }

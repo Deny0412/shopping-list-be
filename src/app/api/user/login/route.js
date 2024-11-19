@@ -19,11 +19,15 @@ export async function POST(request) {
       );
     }
 
-    // Generování JWT tokenu pro existujícího uživatele
+    // Generování nového JWT tokenu
     const token = generateToken({
       id: existingUser._id,
       email: existingUser.email,
     });
+
+    // Uložení nového tokenu do databáze, přepíše starý token
+    existingUser.token = token;
+    await existingUser.save();
 
     // Vrácení odpovědi s tokenem
     return new Response(JSON.stringify({ success: true, token }), {

@@ -1,6 +1,5 @@
 import dbConnect from "@/src/utils/dbConnect";
 import User from "@/src/models/User";
-import { generateToken } from "@/src/utils/jwt";
 
 export async function POST(request) {
   // Připojení k databázi
@@ -19,18 +18,18 @@ export async function POST(request) {
       );
     }
 
-    // Vytvoření nového uživatele
+    // Vytvoření nového uživatele bez generování tokenu
     const user = new User({ name, email });
     await user.save();
 
-    // Generování JWT tokenu
-    const token = generateToken({ id: user._id, email: user.email });
-
-    // Vrácení odpovědi s tokenem
-    return new Response(JSON.stringify({ success: true, token }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Vrácení odpovědi bez tokenu
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "User registered successfully",
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
     // Ošetření chyby a vrácení odpovědi
     return new Response(

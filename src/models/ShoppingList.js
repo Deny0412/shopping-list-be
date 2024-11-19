@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
-
+function getCzechTime() {
+  const now = new Date();
+  const utcOffset = now.getTimezoneOffset(); // v minutách
+  const gmtPlusOneOffset = +120; // GMT+1 je o 60 minut před UTC
+  const czechTime = new Date(
+    now.getTime() + (gmtPlusOneOffset + utcOffset) * 60000
+  );
+  return czechTime;
+}
 const ShoppingListSchema = new mongoose.Schema(
   {
     name: {
@@ -20,7 +28,7 @@ const ShoppingListSchema = new mongoose.Schema(
     items: [
       {
         name: String,
-        quantity: Number,
+        quantity: String,
         status: {
           type: String,
           default: "pending",
@@ -29,18 +37,22 @@ const ShoppingListSchema = new mongoose.Schema(
     ],
     createdAt: {
       type: Date,
-      default: Date.now,
+      default: getCzechTime,
     },
     updatedAt: {
       type: Date,
-      default: Date.now,
+      default: getCzechTime,
     },
   },
   {
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" }, // Automatická správa `createdAt` a `updatedAt`
   }
 );
-
+// Pre-save hook pro aktualizaci pole `updatedAt` na aktuální český čas
+ShoppingListSchema.pre("save", function (next) {
+  this.updatedAt = getCzechTime();
+  next();
+});
 // Přidání indexu na `ownerId` pro optimalizaci dotazů
 ShoppingListSchema.index({ ownerId: 1 });
 
