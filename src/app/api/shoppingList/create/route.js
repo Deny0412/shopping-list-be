@@ -1,29 +1,23 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/src/utils/dbConnect";
-import ShoppingList from "@/src/models/ShoppingList";
 import { authMiddleware } from "@/src/middleware/authMiddleware";
+import shoppingListAbl from "@/src/abl/shoppingListAbl";
 
 async function handler(request) {
   await dbConnect();
   try {
     const { name, members, items } = await request.json();
-    const ownerId = request.user?.id; // Zkontrolujte, zda `request.user` existuje
+    const ownerId = request.user?.id; // Přístup k uživatelským údajům z middleware
 
-    // Vytvoření nového nákupního seznamu
-    const newShoppingList = new ShoppingList({
+    const result = await shoppingListAbl.createShoppingList({
       name,
-      ownerId,
       members,
       items,
+      ownerId,
     });
-    await newShoppingList.save();
-
-    return NextResponse.json(
-      { success: true, ...newShoppingList._doc },
-      { status: 201 }
-    );
+    return NextResponse.json(result, { status: result.success ? 201 : 400 });
   } catch (error) {
-    console.error("Error creating shopping list:", error); // Log the error for debugging
+    console.error("Error creating shopping list:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 400 }

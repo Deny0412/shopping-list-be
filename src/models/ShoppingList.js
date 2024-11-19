@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
+import ItemSchema from "./Item"; // Import the Item schema
+
 function getCzechTime() {
   const now = new Date();
-  const utcOffset = now.getTimezoneOffset(); // v minutách
-  const gmtPlusOneOffset = +120; // GMT+1 je o 60 minut před UTC
+  const utcOffset = now.getTimezoneOffset(); // in minutes
+  const gmtPlusOneOffset = +120; // GMT+1 is 60 minutes ahead of UTC
   const czechTime = new Date(
     now.getTime() + (gmtPlusOneOffset + utcOffset) * 60000
   );
   return czechTime;
 }
+
 const ShoppingListSchema = new mongoose.Schema(
   {
     name: {
@@ -17,7 +20,7 @@ const ShoppingListSchema = new mongoose.Schema(
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: "User", // Přidání reference na kolekci User
+      ref: "User", // Reference to User collection
     },
     members: [
       {
@@ -25,16 +28,7 @@ const ShoppingListSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    items: [
-      {
-        name: String,
-        quantity: String,
-        status: {
-          type: String,
-          default: "pending",
-        },
-      },
-    ],
+    items: [ItemSchema], // Use the imported ItemSchema
     createdAt: {
       type: Date,
       default: getCzechTime,
@@ -45,15 +39,17 @@ const ShoppingListSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" }, // Automatická správa `createdAt` a `updatedAt`
+    timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" }, // Automatic management of `createdAt` and `updatedAt`
   }
 );
-// Pre-save hook pro aktualizaci pole `updatedAt` na aktuální český čas
+
+// Pre-save hook for updating `updatedAt` field to current Czech time
 ShoppingListSchema.pre("save", function (next) {
   this.updatedAt = getCzechTime();
   next();
 });
-// Přidání indexu na `ownerId` pro optimalizaci dotazů
+
+// Adding index on `ownerId` for query optimization
 ShoppingListSchema.index({ ownerId: 1 });
 
 export default mongoose.models.ShoppingList ||
