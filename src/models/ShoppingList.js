@@ -9,6 +9,7 @@ const ShoppingListSchema = new mongoose.Schema(
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
+      ref: "User", // Přidání reference na kolekci User
     },
     members: [
       {
@@ -30,9 +31,18 @@ const ShoppingListSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { versionKey: false }
+  {
+    timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" }, // Automatická správa `createdAt` a `updatedAt`
+  }
 );
+
+// Přidání indexu na `ownerId` pro optimalizaci dotazů
+ShoppingListSchema.index({ ownerId: 1 });
 
 export default mongoose.models.ShoppingList ||
   mongoose.model("ShoppingList", ShoppingListSchema);
