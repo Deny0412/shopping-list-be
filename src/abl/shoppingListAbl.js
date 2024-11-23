@@ -143,6 +143,96 @@ const shoppingListAbl = {
 
     return shoppingList;
   },
+  async resolveItem({ listId, itemId, status, userId }) {
+    // Získání seznamu podle ID
+    const shoppingList = await shoppingListDao.findById(listId);
+
+    // Kontrola oprávnění (uživatel musí být vlastníkem nebo členem)
+    const isOwner = shoppingList.ownerId.toString() === userId;
+    const isMember = shoppingList.members.some(
+      (memberId) => memberId.toString() === userId
+    );
+
+    if (!isOwner && !isMember) {
+      throw new Error("Unauthorized access");
+    }
+
+    // Aktualizace statusu položky v DAO
+    const updatedItem = await shoppingListDao.updateItem(listId, itemId, {
+      status,
+    });
+
+    return updatedItem;
+  },
+  async getShoppingListDetail({ listId, userId }) {
+    const shoppingList = await shoppingListDao.findByIdWithDetails(listId);
+
+    // Check if the user is the owner or a member
+    const isOwner = shoppingList.ownerId.toString() === userId;
+    const isMember = shoppingList.members.some(
+      (member) => member.toString() === userId
+    );
+
+    if (!isOwner && !isMember) {
+      throw new Error("Unauthorized access");
+    }
+
+    return shoppingList;
+  },
+  async removeMember({ shoppingListId, memberId, userId }) {
+    const shoppingList = await shoppingListDao.findById(shoppingListId);
+
+    // Ověřujeme, zda uživatel existuje v seznamu členů
+    const isMember = shoppingList.members.some(
+      (member) => member._id.toString() === memberId
+    );
+
+    if (!isMember) {
+      throw new Error("User is not a member of this shopping list");
+    }
+
+    // Pouze vlastník nebo samotný člen může odstranit
+    if (shoppingList.ownerId.toString() !== userId && userId !== memberId) {
+      throw new Error("Unauthorized access");
+    }
+
+    const result = await shoppingListDao.removeMember(shoppingListId, memberId);
+    return result;
+  },
+
+  async addMember({ shoppingListId, memberId, userId }) {
+    // Nejprve ověříme, zda je uživatel vlastníkem
+    const shoppingList = await shoppingListDao.findById(shoppingListId);
+
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
+
+    if (shoppingList.ownerId.toString() !== userId) {
+      throw new Error("Only the owner can add members");
+    }
+
+    // Přidání člena
+    const updatedShoppingList = await shoppingListDao.addMember(
+      shoppingListId,
+      memberId
+    );
+
+    return updatedShoppingList;
+  },
+  async getListsByUser(userId) {
+    if (!userId) {
+      throw new Error("User ID is required to retrieve shopping lists");
+    }
+
+    // Najdeme seznamy, kde je uživatel vlastníkem nebo členem
+    const shoppingLists = await shoppingListDao.findListsByUser(userId);
+
+    return {
+      success: true,
+      data: shoppingLists,
+    };
+  },
 };
 
 export default shoppingListAbl;

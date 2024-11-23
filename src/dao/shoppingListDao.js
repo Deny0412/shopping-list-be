@@ -21,11 +21,20 @@ async function findShoppingListById(id) {
 
 // Helper function to validate item structure using the Item model
 async function validateItemStructure(items) {
+  if (!Array.isArray(items)) {
+    throw new Error("Items must be an array");
+  }
+
   for (const [index, item] of items.entries()) {
-    const validationInstance = new Item(item);
     try {
+      // Vytvoření instance modelu Item pro validaci
+      const validationInstance = new Item(item);
+
+      // Použití metody validate() modelu Item
       await validationInstance.validate();
+      console.log(validationInstance.validate());
     } catch (validationError) {
+      // Čitelnější chyba s indexem a názvem položky
       throw new Error(
         `Validation error in item at index ${index} (${
           item.name || "Unnamed item"
@@ -38,17 +47,14 @@ async function validateItemStructure(items) {
 const shoppingListDao = {
   async createShoppingList(data) {
     try {
-      // Validate item structure using the Item model
-      if (Array.isArray(data.items)) {
-        await validateItemStructure(data.items);
-      }
-
+      // Vytvoření seznamu
       const newShoppingList = new ShoppingList(data);
       await newShoppingList.save();
+
       return { success: true, data: newShoppingList };
     } catch (error) {
+      // Zpracování validačních chyb
       if (error.name === "ValidationError") {
-        // Collect validation errors for detailed message
         const messages = Object.keys(error.errors).map((key) => {
           const errorObj = error.errors[key];
           if (key.startsWith("items")) {
@@ -66,6 +72,7 @@ const shoppingListDao = {
         throw new Error(messages.join(", "));
       }
 
+      // Zpracování dalších chyb
       throw new Error(`Error creating shopping list: ${error.message}`);
     }
   },
@@ -138,9 +145,6 @@ const shoppingListDao = {
       throw new Error("Item not found");
     }
 
-    // Validate item structure for updates using the Item model
-    await validateItemStructure([{ ...item.toObject(), ...updates }]);
-
     // Update allowed fields
     if (updates.name) item.name = updates.name;
     if (updates.quantity) item.quantity = updates.quantity;
@@ -151,20 +155,73 @@ const shoppingListDao = {
   },
 
   async deleteItem(listId, itemId) {
-    const shoppingList = await this.findById(listId);
+    validateObjectId(listId);
+    validateObjectId(itemId);
 
-    const item = shoppingList.items.id(itemId);
-    if (!item) {
-      throw new Error("Item not found");
+    // Použijeme `$pull` k odstranění položky přímo v MongoDB
+    const result = await ShoppingList.updateOne(
+      { _id: listId },
+      { $pull: { items: { _id: itemId } } }
+    );
+
+    // Zkontrolujeme, zda byla položka skutečně odstraněna
+    if (result.modifiedCount === 0) {
+      throw new Error("Item not found or already deleted");
     }
 
-    item.remove();
-    await shoppingList.save();
     return { success: true, message: "Item deleted successfully" };
   },
-  async findAllByOwner(ownerId) {
-    validateObjectId(ownerId);
-    return await ShoppingList.find({ ownerId }).populate("members");
+  async removeMember(shoppingListId, memberId) {
+    const shoppingList = await ShoppingList.findById(shoppingListId);
+
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
+
+    // Odebereme člena podle ID
+    shoppingList.members = shoppingList.members.filter(
+      (member) => member._id.toString() !== memberId
+    );
+
+    await shoppingList.save();
+
+    return { success: true, message: "Member removed successfully" };
+  },
+  async addMember(shoppingListId, memberId) {
+    const shoppingList = await ShoppingList.findById(shoppingListId);
+
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
+
+    // Kontrola, zda člen už není přidán
+    if (shoppingList.members.includes(memberId)) {
+      throw new Error("Member is already in the shopping list");
+    }
+
+    // Přidání člena
+    shoppingList.members.push(memberId);
+
+    await shoppingList.save();
+
+    return shoppingList;
+  },
+  async findByIdWithDetails(id) {
+    return await ShoppingList.findById(id)
+      .populate("ownerId", "name email") // Populate owner details
+      .populate("members", "name email"); // Populate member details
+  },
+  async findListsByUser(userId) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    // Najít seznamy, kde je uživatel vlastníkem nebo členem
+    const shoppingLists = await ShoppingList.find({
+      $or: [{ ownerId: userId }, { members: userId }],
+    }).populate("members"); // Pokud chceš mít detaily členů
+
+    return shoppingLists;
   },
 };
 
