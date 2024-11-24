@@ -1,5 +1,4 @@
-import ShoppingList from "@/src/models/ShoppingList";
-import Item from "@/src/models/Item";
+import ShoppingList from "../../src/models/ShoppingList";
 import mongoose from "mongoose";
 
 // Helper function to validate ObjectId
@@ -11,11 +10,13 @@ function validateObjectId(id) {
 
 // Helper function to find shopping list and handle not found case
 async function findShoppingListById(id) {
-  validateObjectId(id);
+  //validateObjectId(id);
   const shoppingList = await ShoppingList.findById(id);
+  console.log(shoppingList);
   if (!shoppingList) {
     throw new Error("Shopping list not found");
   }
+  console.log(shoppingList);
   return shoppingList;
 }
 
@@ -95,11 +96,6 @@ const shoppingListDao = {
   async updateShoppingList(id, updates) {
     const shoppingList = await findShoppingListById(id);
 
-    // Validate item structure if items are being updated
-    if (Array.isArray(updates.items)) {
-      await validateItemStructure(updates.items);
-    }
-
     // Update only allowed fields
     if (updates.name) {
       shoppingList.name = updates.name;
@@ -125,16 +121,15 @@ const shoppingListDao = {
   },
 
   async addItemToShoppingList(listId, itemData) {
-    const shoppingList = await findShoppingListById(listId);
+    const shoppingList = await ShoppingList.findById(listId);
 
-    const newItem = {
-      _id: new mongoose.Types.ObjectId(),
-      ...itemData,
-    };
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
 
-    shoppingList.items.push(newItem);
+    shoppingList.items.push(itemData); // Přidání položky přímo jako objekt
     await shoppingList.save();
-    return newItem;
+    return shoppingList.items[shoppingList.items.length - 1]; // Vrátíme přidanou položku
   },
 
   async updateItem(listId, itemId, updates) {

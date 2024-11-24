@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import dbConnect from "@/src/utils/dbConnect";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
 import { authMiddleware } from "@/src/middleware/authMiddleware";
 
@@ -9,11 +10,10 @@ async function handler(request) {
       { status: 405 }
     );
   }
-
+  await dbConnect();
   try {
     const { shoppingListId, name, quantity } = await request.json();
     const userId = request.user?.id;
-
     if (!shoppingListId || !name || !quantity) {
       return NextResponse.json(
         {

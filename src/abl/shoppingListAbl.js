@@ -1,19 +1,20 @@
-import shoppingListDao from "@/src/dao/shoppingListDao";
-
-async function verifyOwnership(shoppingList, userId) {
-  if (!shoppingList) {
-    throw new Error("Shopping list not found");
-  }
-
-  if (shoppingList.ownerId.toString() !== userId) {
-    throw new Error("Unauthorized access");
-  }
-}
+import shoppingListDao from "../../src/dao/shoppingListDao";
+import { validateUserExists } from "../../src/utils/validationHelpers";
 
 const shoppingListAbl = {
   async createShoppingList({ name, members, items, ownerId }) {
     if (!ownerId) {
       throw new Error("Owner ID is required to create a shopping list");
+    }
+    if (!name) {
+      throw new Error("Name is required to create a shopping list");
+    }
+
+    // Validate members
+    if (members && members.length > 0) {
+      for (const memberId of members) {
+        await validateUserExists(memberId);
+      }
     }
 
     const data = {
@@ -26,7 +27,27 @@ const shoppingListAbl = {
     const result = await shoppingListDao.createShoppingList(data);
     return result;
   },
+  async verifyAccess(shoppingList, userId, requireOwnership = false) {
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
 
+    const isOwner = shoppingList.ownerId.toString() === userId;
+
+    const isMember = shoppingList.members.some((member) => {
+      return member._id.toString() === userId; // Kontrola pouze na `_id` uvnitř member objektu
+    });
+
+    if (requireOwnership && !isOwner) {
+      throw new Error("Only the owner has access");
+    }
+
+    if (!isOwner && !isMember) {
+      throw new Error("Unauthorized access");
+    }
+
+    return true; // Pokud je validace úspěšná
+  },
   async updateShoppingList({ id, name, members, items, userId }) {
     if (!id) {
       throw new Error("Shopping list ID is required");
@@ -46,7 +67,7 @@ const shoppingListAbl = {
 
   async deleteShoppingList(id, userId) {
     const shoppingList = await shoppingListDao.findById(id);
-    await verifyOwnership(shoppingList, userId);
+    await this.verifyAccess(shoppingList, userId, true);
 
     // Delete the shopping list
     await shoppingListDao.deleteById(id);
@@ -55,6 +76,7 @@ const shoppingListAbl = {
   },
 
   async addItem({ listId, name, quantity, userId }) {
+    const shoppingList = await shoppingListDao.findById(listId);
     // Validate input
     if (!listId) {
       throw new Error("Shopping list ID is required");
@@ -65,20 +87,7 @@ const shoppingListAbl = {
     if (!quantity) {
       throw new Error("Item quantity is required");
     }
-
-    // Find shopping list and validate access
-    const shoppingList = await shoppingListDao.findById(listId);
-
-    // Check if the user is the owner or a member
-    const isOwner = shoppingList.ownerId.toString() === userId;
-    const isMember = shoppingList.members.some(
-      (memberId) => memberId.toString() === userId
-    );
-
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized access");
-    }
-
+    await this.verifyAccess(shoppingList, userId);
     // Add item to the shopping list
     const newItem = await shoppingListDao.addItemToShoppingList(listId, {
       name,
@@ -90,16 +99,9 @@ const shoppingListAbl = {
 
   async updateItem({ listId, itemId, name, quantity, status, userId }) {
     const shoppingList = await shoppingListDao.findById(listId);
-
     // Check if the user is the owner or a member
-    const isOwner = shoppingList.ownerId.toString() === userId;
-    const isMember = shoppingList.members.some(
-      (memberId) => memberId.toString() === userId
-    );
-
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized access");
-    }
+    // Ověříme, zda je uživatel vlastníkem
+    await this.verifyAccess(shoppingList, userId);
 
     const updatedItem = await shoppingListDao.updateItem(listId, itemId, {
       name,
@@ -112,22 +114,12 @@ const shoppingListAbl = {
 
   async deleteItem({ listId, itemId, userId }) {
     const shoppingList = await shoppingListDao.findById(listId);
-
     // Check if the user is the owner or a member
-    const isOwner = shoppingList.ownerId.toString() === userId;
-    const isMember = shoppingList.members.some(
-      (memberId) => memberId.toString() === userId
-    );
-
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized access");
-    }
-
+    // Ověříme, zda je uživatel vlastníkem
+    await this.verifyAccess(shoppingList, userId);
     return await shoppingListDao.deleteItem(listId, itemId);
   },
-  async getShoppingListsByOwner(ownerId) {
-    return await shoppingListDao.findAllByOwner(ownerId);
-  },
+
   async getShoppingList(listId, userId) {
     const shoppingList = await shoppingListDao.findById(listId);
 
@@ -147,15 +139,7 @@ const shoppingListAbl = {
     // Získání seznamu podle ID
     const shoppingList = await shoppingListDao.findById(listId);
 
-    // Kontrola oprávnění (uživatel musí být vlastníkem nebo členem)
-    const isOwner = shoppingList.ownerId.toString() === userId;
-    const isMember = shoppingList.members.some(
-      (memberId) => memberId.toString() === userId
-    );
-
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized access");
-    }
+    await this.verifyAccess(shoppingList, userId);
 
     // Aktualizace statusu položky v DAO
     const updatedItem = await shoppingListDao.updateItem(listId, itemId, {
@@ -167,15 +151,7 @@ const shoppingListAbl = {
   async getShoppingListDetail({ listId, userId }) {
     const shoppingList = await shoppingListDao.findByIdWithDetails(listId);
 
-    // Check if the user is the owner or a member
-    const isOwner = shoppingList.ownerId.toString() === userId;
-    const isMember = shoppingList.members.some(
-      (member) => member.toString() === userId
-    );
-
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized access");
-    }
+    await this.verifyAccess(shoppingList, userId);
 
     return shoppingList;
   },
@@ -207,7 +183,12 @@ const shoppingListAbl = {
     if (!shoppingList) {
       throw new Error("Shopping list not found");
     }
+    // Kontrola, zda je uživatel vlastníkem
+    if (shoppingList.ownerId.toString() === memberId) {
+      throw new Error("Owner cannot be added as a member");
+    }
 
+    // Ověření, že aktuálně přihlášený uživatel (owner) provádí tuto akci
     if (shoppingList.ownerId.toString() !== userId) {
       throw new Error("Only the owner can add members");
     }
