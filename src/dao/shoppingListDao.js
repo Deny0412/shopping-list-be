@@ -20,31 +20,6 @@ async function findShoppingListById(id) {
   return shoppingList;
 }
 
-// Helper function to validate item structure using the Item model
-async function validateItemStructure(items) {
-  if (!Array.isArray(items)) {
-    throw new Error("Items must be an array");
-  }
-
-  for (const [index, item] of items.entries()) {
-    try {
-      // Vytvoření instance modelu Item pro validaci
-      const validationInstance = new Item(item);
-
-      // Použití metody validate() modelu Item
-      await validationInstance.validate();
-      console.log(validationInstance.validate());
-    } catch (validationError) {
-      // Čitelnější chyba s indexem a názvem položky
-      throw new Error(
-        `Validation error in item at index ${index} (${
-          item.name || "Unnamed item"
-        }): ${validationError.message}`
-      );
-    }
-  }
-}
-
 const shoppingListDao = {
   async createShoppingList(data) {
     try {

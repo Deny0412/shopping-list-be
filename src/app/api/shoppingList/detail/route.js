@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
 import { authMiddleware } from "@/src/middleware/authMiddleware";
 
-async function handler(request, { params }) {
-  const { id } = params;
+async function handler(request) {
+  // Extrahujeme `id` z dotazovacích parametrů
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
 
   if (!id) {
     return NextResponse.json(
@@ -13,8 +15,9 @@ async function handler(request, { params }) {
   }
 
   try {
-    const userId = request.user?.id;
+    const userId = request.user?.id; // Získáme přihlášeného uživatele z middleware
 
+    // Zavoláme ABL vrstvu s parametry
     const shoppingList = await shoppingListAbl.getShoppingListDetail({
       listId: id,
       userId,
@@ -32,4 +35,5 @@ async function handler(request, { params }) {
   }
 }
 
+// Middleware pro autorizaci přidáme k GET handleru
 export const GET = authMiddleware(handler);
