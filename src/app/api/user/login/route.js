@@ -1,6 +1,7 @@
 import dbConnect from "@/src/utils/dbConnect";
 import User from "@/src/models/User";
 import { generateToken } from "@/src/utils/jwt";
+import { NextResponse } from "next/server";
 
 export async function POST(request) {
   // Připojení k databázi
@@ -13,7 +14,7 @@ export async function POST(request) {
     // Zkontrolování, zda uživatel s tímto e-mailem existuje
     const existingUser = await User.findOne({ email });
     if (!existingUser) {
-      return new Response(
+      return new NextResponse(
         JSON.stringify({ success: false, message: "Invalid credentials" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
@@ -30,13 +31,13 @@ export async function POST(request) {
     await existingUser.save();
 
     // Vrácení odpovědi s tokenem
-    return new Response(JSON.stringify({ success: true, token }), {
+    return new NextResponse(JSON.stringify({ success: true, token }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     // Ošetření chyby a vrácení odpovědi
-    return new Response(
+    return new NextNextResponse(
       JSON.stringify({ success: false, message: error.message }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
