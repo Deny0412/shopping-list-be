@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
 import { authMiddleware } from "@/src/middleware/authMiddleware";
+import dbConnect from "@/src/utils/dbConnect";
 
 async function handler(request) {
-  // Extrahujeme `id` z dotazovacích parametrů
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Shopping list ID is required" },
-      { status: 400 }
-    );
-  }
-
+  await dbConnect();
   try {
-    const userId = request.user?.id; // Získáme přihlášeného uživatele z middleware
+    // Extrahujeme `id` z dotazovacích parametrů
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    let userId = searchParams.get("userId");
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "Shopping list ID is required" },
+        { status: 400 }
+      );
+    }
+    userId = request.user?.id; // Získáme přihlášeného uživatele z middleware
 
     // Zavoláme ABL vrstvu s parametry
     const shoppingList = await shoppingListAbl.getShoppingListDetail({

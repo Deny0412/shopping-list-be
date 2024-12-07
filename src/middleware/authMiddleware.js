@@ -23,7 +23,7 @@ export function authMiddleware(handler) {
 
       // Najděte uživatele podle ID z dekódovaného tokenu
       const user = await User.findById(decodedToken.id);
-
+      //const user = await User.findById(decodedToken);
       // Zkontrolujte, zda uživatel existuje a zda token odpovídá
       if (!user || user.token !== token) {
         return NextResponse.json(
