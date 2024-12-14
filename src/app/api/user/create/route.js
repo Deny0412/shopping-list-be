@@ -10,7 +10,7 @@ export async function POST(request) {
     const user = new User({ name, email });
     await user.save();
 
-    return NextResponse.json({ success: true, data: user }, { status: 201 });
+    return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

@@ -1,26 +1,24 @@
 import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
+import dbConnect from "@/src/utils/dbConnect";
 
-async function handler(request) {
+export async function PUT(request) {
   if (request.method !== "PUT") {
     return NextResponse.json(
-      { success: false, message: "Method Not Allowed" },
+      { message: "Method Not Allowed" },
       { status: 405 }
     );
   }
-
+  await dbConnect();
   try {
     // Získání dat z požadavku
-    const { shoppingListId, itemId, status } = await request.json();
-    const userId = request.user?.id;
+    const { shoppingListId, itemId, status, userId } = await request.json();
 
     // Validace povinných polí
-    if (!shoppingListId || !itemId || !status) {
+    if (!shoppingListId || !itemId || !status || !userId) {
       return NextResponse.json(
         {
-          success: false,
-          message: "ShoppingList ID, Item ID, and status are required",
+          message: "ShoppingList ID, Item ID, status, and User ID are required",
         },
         { status: 400 }
       );
@@ -34,17 +32,9 @@ async function handler(request) {
       userId,
     });
 
-    return NextResponse.json(
-      { success: true, data: updatedItem },
-      { status: 200 }
-    );
+    return NextResponse.json(updatedItem, { status: 200 });
   } catch (error) {
     console.error("Error resolving item:", error.message);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-export const PUT = authMiddleware(handler);

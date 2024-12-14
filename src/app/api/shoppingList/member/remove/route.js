@@ -1,29 +1,29 @@
 import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
+import dbConnect from "@/src/utils/dbConnect";
 
-async function handler(request) {
+export async function POST(request) {
   if (request.method !== "POST") {
     return NextResponse.json(
-      { success: false, message: "Method Not Allowed" },
+      { message: "Method Not Allowed" },
       { status: 405 }
     );
   }
-
+  await dbConnect();
   try {
-    const { shoppingListId, memberId } = await request.json();
-    const userId = request.user?.id;
+    // Načtení dat z těla požadavku
+    const { shoppingListId, memberId, userId } = await request.json();
 
     if (!shoppingListId || !memberId) {
       return NextResponse.json(
         {
-          success: false,
           message: "ShoppingList ID and member ID are required",
         },
         { status: 400 }
       );
     }
 
+    // Zavolání ABL vrstvy
     const result = await shoppingListAbl.removeMember({
       shoppingListId,
       memberId,
@@ -32,11 +32,7 @@ async function handler(request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error removing member:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-export const POST = authMiddleware(handler);

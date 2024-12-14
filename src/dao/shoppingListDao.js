@@ -8,18 +8,6 @@ function validateObjectId(id) {
   }
 }
 
-// Helper function to find shopping list and handle not found case
-async function findShoppingListById(id) {
-  //validateObjectId(id);
-  const shoppingList = await ShoppingList.findById(id);
-  console.log(shoppingList);
-  if (!shoppingList) {
-    throw new Error("Shopping list not found");
-  }
-  console.log(shoppingList);
-  return shoppingList;
-}
-
 const shoppingListDao = {
   async createShoppingList(data) {
     try {
@@ -58,16 +46,26 @@ const shoppingListDao = {
   }, */
 
   async findById(listId) {
-    validateObjectId(listId);
-    const shoppingList = await ShoppingList.findById(listId).populate(
-      "members"
-    );
+    const shoppingList = await ShoppingList.findOne({
+      _id: listId,
+    });
+
     if (!shoppingList) {
       throw new Error("Shopping list not found");
     }
     return shoppingList;
   },
-
+  // Helper function to find shopping list and handle not found case
+  async findShoppingListById(id) {
+    //validateObjectId(id);
+    const shoppingList = await ShoppingList.findById(id);
+    console.log(shoppingList);
+    if (!shoppingList) {
+      throw new Error("Shopping list not found");
+    }
+    console.log(shoppingList);
+    return shoppingList;
+  },
   async updateShoppingList(id, updates) {
     const shoppingList = await findShoppingListById(id);
 
@@ -182,14 +180,15 @@ const shoppingListDao = {
       .populate("members", "name email"); // Populate member details
   },
   async findListsByUser(userId) {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    /* if (!mongoose.Types.ObjectId.isValid(userId)) {
       throw new Error("Invalid user ID");
-    }
+    } */
 
     // Najít seznamy, kde je uživatel vlastníkem nebo členem
     const shoppingLists = await ShoppingList.find({
       $or: [{ ownerId: userId }, { members: userId }],
-    }).populate("members"); // Pokud chceš mít detaily členů
+    }).populate("members");
+    // Pokud chceš mít detaily členů
 
     return shoppingLists;
   },

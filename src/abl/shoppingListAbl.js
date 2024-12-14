@@ -31,9 +31,9 @@ const shoppingListAbl = {
     if (!shoppingList) {
       throw new Error("Shopping list not found");
     }
-
-    const isOwner = shoppingList.ownerId.toString() === userId;
-
+    console.log(shoppingList);
+    const isOwner = shoppingList.ownerId._id.toString() === userId;
+    console.log(isOwner);
     const isMember = shoppingList.members.some((member) => {
       return member._id.toString() === userId; // Kontrola pouze na `_id` uvnitř member objektu
     });
@@ -41,7 +41,6 @@ const shoppingListAbl = {
     if (requireOwnership && !isOwner) {
       throw new Error("Only the owner has access");
     }
-
     if (!isOwner && !isMember) {
       throw new Error("Unauthorized access");
     }
@@ -54,7 +53,7 @@ const shoppingListAbl = {
     }
 
     const shoppingList = await shoppingListDao.findById(id);
-    await verifyOwnership(shoppingList, userId);
+    await this.verifyAccess(shoppingList, userId, true);
 
     // Update the shopping list with allowed fields
     const updatedShoppingList = await shoppingListDao.updateShoppingList(id, {
@@ -167,8 +166,11 @@ const shoppingListAbl = {
       throw new Error("User is not a member of this shopping list");
     }
 
-    // Pouze vlastník nebo samotný člen může odstranit
-    if (shoppingList.ownerId.toString() !== userId && userId !== memberId) {
+    if (
+      shoppingList.members.includes(memberId) &&
+      memberId !== userId &&
+      shoppingList.ownerId.toString() !== userId
+    ) {
       throw new Error("Unauthorized access");
     }
 
@@ -210,8 +212,7 @@ const shoppingListAbl = {
     const shoppingLists = await shoppingListDao.findListsByUser(userId);
 
     return {
-      success: true,
-      data: shoppingLists,
+      shoppingLists,
     };
   },
 };

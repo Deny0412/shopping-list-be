@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
 
-async function handler(request) {
+export async function GET(request) {
   if (request.method !== "GET") {
     return NextResponse.json(
-      { success: false, message: "Method Not Allowed" },
+      { message: "Method Not Allowed" },
       { status: 405 }
     );
   }
 
   try {
-    const userId = request.user?.id;
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
     const lists = await shoppingListAbl.getListsByUser(userId);
 
-    return NextResponse.json({ success: true, data: lists }, { status: 200 });
+    return NextResponse.json(lists, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error fetching shopping lists:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-export const GET = authMiddleware(handler);

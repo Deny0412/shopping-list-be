@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/src/utils/dbConnect";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
 import ShoppingListABL from "@/src/abl/shoppingListAbl";
 
-async function handler(request) {
+export async function DELETE(request) {
   await dbConnect();
   try {
     if (request.method !== "DELETE") {
@@ -13,8 +12,7 @@ async function handler(request) {
       );
     }
 
-    const { id } = await request.json();
-    const userId = request.user?.id; // User ID from authenticated request
+    const { id, userId } = await request.json(); // Přímé načtení `userId` z těla požadavku
 
     if (!id) {
       return NextResponse.json(
@@ -32,5 +30,3 @@ async function handler(request) {
     );
   }
 }
-
-export const DELETE = authMiddleware(handler);

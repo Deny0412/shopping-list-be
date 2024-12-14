@@ -1,22 +1,28 @@
 import { NextResponse } from "next/server";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
 import dbConnect from "@/src/utils/dbConnect";
 
-async function handler(request) {
+export async function GET(request) {
   await dbConnect();
   try {
-    // Extrahujeme `id` z dotazovacích parametrů
+    // Extrahujeme `id` a `userId` z dotazovacích parametrů
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    let userId = searchParams.get("userId");
+    const userId = searchParams.get("userId");
+
     if (!id) {
       return NextResponse.json(
-        { success: false, message: "Shopping list ID is required" },
+        { message: "Shopping list ID is required" },
         { status: 400 }
       );
     }
-    userId = request.user?.id; // Získáme přihlášeného uživatele z middleware
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
     // Zavoláme ABL vrstvu s parametry
     const shoppingList = await shoppingListAbl.getShoppingListDetail({
@@ -24,17 +30,9 @@ async function handler(request) {
       userId,
     });
 
-    return NextResponse.json(
-      { success: true, data: shoppingList },
-      { status: 200 }
-    );
+    return NextResponse.json(shoppingList);
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error fetching shopping list details:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-// Middleware pro autorizaci přidáme k GET handleru
-export const GET = authMiddleware(handler);

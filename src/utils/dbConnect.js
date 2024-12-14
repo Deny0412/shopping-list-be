@@ -9,7 +9,7 @@ if (!MONGODB_URI) {
 async function dbConnect() {
   try {
     // Otevře nové připojení bez použití cache
-    const connection = await mongoose.connect(MONGODB_URI);
+    const connection = await mongoose.connect(MONGODB_URI, {});
     console.log("Connected to MongoDB");
     return connection;
   } catch (error) {

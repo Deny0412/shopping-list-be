@@ -1,45 +1,38 @@
 import { NextResponse } from "next/server";
+import dbConnect from "@/src/utils/dbConnect";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
 
-async function handler(request) {
+export async function DELETE(request) {
   if (request.method !== "DELETE") {
     return NextResponse.json(
-      { success: false, message: "Method Not Allowed" },
+      { message: "Method Not Allowed" },
       { status: 405 }
     );
   }
-
+  await dbConnect();
   try {
-    const { shoppingListId, itemId } = await request.json();
-    const userId = request.user?.id;
+    // Načtení dat z těla požadavku
+    const { shoppingListId, itemId, userId } = await request.json();
 
-    if (!shoppingListId || !itemId) {
+    if (!shoppingListId || !itemId || !userId) {
       return NextResponse.json(
         {
-          success: false,
-          message: "ShoppingList ID and Item ID are required",
+          message: "ShoppingList ID, Item ID, and User ID are required",
         },
         { status: 400 }
       );
     }
 
+    // Volání ABL vrstvy pro smazání položky
     const result = await shoppingListAbl.deleteItem({
       listId: shoppingListId,
       itemId,
       userId,
     });
 
-    return NextResponse.json(
-      { success: true, message: result.message },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: result.message }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error deleting item:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-export const DELETE = authMiddleware(handler);

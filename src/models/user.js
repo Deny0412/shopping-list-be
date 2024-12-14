@@ -22,10 +22,6 @@ const UserSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    token: {
-      type: String,
-      default: null, // Pole pro ukládání aktuálního tokenu uživatele
-    },
     createdAt: {
       type: Date,
       default: getCzechTime, // Použití funkce pro český čas

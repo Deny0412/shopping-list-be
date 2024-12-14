@@ -1,29 +1,29 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/src/utils/dbConnect";
 import shoppingListAbl from "@/src/abl/shoppingListAbl";
-import { authMiddleware } from "@/src/middleware/authMiddleware";
 
-async function handler(request) {
+export async function POST(request) {
   if (request.method !== "POST") {
     return NextResponse.json(
-      { success: false, message: "Method Not Allowed" },
+      { message: "Method Not Allowed" },
       { status: 405 }
     );
   }
   await dbConnect();
   try {
-    const { shoppingListId, name, quantity } = await request.json();
-    const userId = request.user?.id;
-    if (!shoppingListId || !name || !quantity) {
+    // Načtení dat z těla požadavku
+    const { shoppingListId, name, quantity, userId } = await request.json();
+
+    if (!shoppingListId || !name || !quantity || !userId) {
       return NextResponse.json(
         {
-          success: false,
-          message: "ShoppingList ID, name, and quantity are required",
+          message: "ShoppingList ID, name, quantity, and userId are required",
         },
         { status: 400 }
       );
     }
 
+    // Přidání položky do nákupního seznamu
     const newItem = await shoppingListAbl.addItem({
       listId: shoppingListId,
       name,
@@ -31,13 +31,9 @@ async function handler(request) {
       userId,
     });
 
-    return NextResponse.json({ success: true, data: newItem }, { status: 201 });
+    return NextResponse.json(newItem, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error adding item:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }
-
-export const POST = authMiddleware(handler);
