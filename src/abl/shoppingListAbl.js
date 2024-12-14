@@ -148,7 +148,7 @@ const shoppingListAbl = {
     return updatedItem;
   },
   async getShoppingListDetail({ listId, userId }) {
-    const shoppingList = await shoppingListDao.findByIdWithDetails(listId);
+    const shoppingList = await shoppingListDao.findById(listId);
 
     await this.verifyAccess(shoppingList, userId);
 

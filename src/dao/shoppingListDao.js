@@ -15,7 +15,7 @@ const shoppingListDao = {
       const newShoppingList = new ShoppingList(data);
       await newShoppingList.save();
 
-      return { success: true, data: newShoppingList };
+      return newShoppingList;
     } catch (error) {
       // Zpracování validačních chyb
       if (error.name === "ValidationError") {
@@ -67,7 +67,7 @@ const shoppingListDao = {
     return shoppingList;
   },
   async updateShoppingList(id, updates) {
-    const shoppingList = await findShoppingListById(id);
+    const shoppingList = await this.findById(id);
 
     // Update only allowed fields
     if (updates.name) {

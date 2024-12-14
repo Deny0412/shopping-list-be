@@ -17,7 +17,7 @@ export async function POST(request) {
       ownerId,
     });
 
-    return NextResponse.json(result, { status: result.success ? 201 : 400 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Error creating shopping list:", error);
     return NextResponse.json({ message: error.message }, { status: 400 });
